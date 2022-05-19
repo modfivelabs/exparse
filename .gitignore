@@ -130,4 +130,3 @@ dmypy.json
 
 # Local files
 local/*
-local/exparse.code-workspace
