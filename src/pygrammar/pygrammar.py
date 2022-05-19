@@ -1,14 +1,12 @@
 import re
 
-class Symbols:
-
+class __Symbols:
     FROZEN = '~'
     FINISH = ';'
     REPEAT = 'x'
     SERIES = '...'
 
-class Patterns:
-
+class __Patterns:
     SUM = r'^(sum=|\+=)(\d+(\.\d+)?):(.*)'
     COUNT = r'^(count=|\*=)(\d+):(.*)'
     BRACKETS = r'\({1}[\d,x~_. ]+\){1}'
@@ -16,32 +14,29 @@ class Patterns:
     SERIES = r',?(\d+(\.\d+)?\.{3})|(\([(\d+(\.\d)*)\(\)x,~_ ]+\)\.{3});?,?'
     INTERNAL = r'[\d~]'
 
-def pattern_match(pattern : str, expression : str):
+def _pattern_match(pattern, expression):
     match_result = re.match(pattern, expression)
     return match_result is not None, match_result
 
-def clean_expression(expression : str):
-    return ','.join([val for val in expression.replace(' ','').split(',') if val != ''])
+def _clean_output(expression):
+    return expression.replace(__Symbols.FROZEN, ',')
 
-def clean_output(expression : str):
-    return expression.replace(Symbols.FROZEN, ',')
-
-def parse_repetition_expression(expression : str):
+def _parse_repetition_expression(expression):
 
     pattern = []
-    result, match = pattern_match(Patterns.REPEAT, expression)
+    result, match = _pattern_match(__Patterns.REPEAT, expression)
 
     while result:
         value, multiplier = match.groups()
         if multiplier.isdigit():
             for i in range(int(multiplier)):
                 pattern.append(value)
-        expression = Symbols.FROZEN.join(pattern)
-        result, match = pattern_match(Patterns.REPEAT, expression)
+        expression = __Symbols.FROZEN.join(pattern)
+        result, match = _pattern_match(__Patterns.REPEAT, expression)
 
     return expression
 
-def parse_simple_expression(expression : str):
+def _parse_expression(expression):
 
     expanded_expression = expression.split(',')
     parsed_expression = []
@@ -51,31 +46,33 @@ def parse_simple_expression(expression : str):
         if exp == '_':
             parsed_expression.append('null')
 
-        elif Symbols.REPEAT in exp:
-            parsed_expression.append(parse_repetition_expression(exp))
+        elif __Symbols.REPEAT in exp:
+            parsed_expression.append(_parse_repetition_expression(exp))
 
-        elif pattern_match(Patterns.INTERNAL, exp)[0]:
-            parsed_expression.append(exp.replace(Symbols.SERIES, ''))
+        elif _pattern_match(__Patterns.INTERNAL, exp)[0]:
+            parsed_expression.append(exp.replace(__Symbols.SERIES, ''))
 
         elif exp != '':
             raise ValueError('Expression: {}\nContains unexpected characters.'.format(exp))
     
-    expression = Symbols.FROZEN.join(parsed_expression)
+    expression = __Symbols.FROZEN.join(parsed_expression)
     return expression
 
-def parse_expression(expression : str, clean : bool = True):
+def clean_expression(expression):
+    return ','.join([val for val in expression.replace(' ','').split(',') if val != ''])
 
+def parse(expression):
     expression = clean_expression(expression)
-    expression = parse_simple_expression(expression)
+    expression = _parse_expression(expression)
     
-    return expression if not clean else clean_output(expression)
+    return _clean_output(expression)
 
-def parse_to_numbers(expression : str, empty : str = 0):
-    parsed_expression = parse_expression(expression)
+def parse_to_numbers(expression, replace_empty=0.0):
+    parsed_expression = parse(expression)
     number_list = []
     for value in parsed_expression.split(','):
         if value == 'null':
-            number_list.append(empty)
+            number_list.append(replace_empty)
         elif value.isdigit():
             number_list.append(float(value))
     return number_list
