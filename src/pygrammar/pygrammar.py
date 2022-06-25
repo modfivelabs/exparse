@@ -15,11 +15,25 @@ class __Patterns:
     INTERNAL = r'[\d~]'
 
 def _pattern_match(pattern, expression):
-    match_result = re.match(pattern, expression)
+    match_result = re.search(pattern, expression)
     return match_result is not None, match_result
 
 def _clean_output(expression):
     return expression.replace(__Symbols.FROZEN, ',')
+
+def _parse_bracket_expression(expression):
+
+    result, match = _pattern_match(__Patterns.BRACKETS, expression)
+
+    while result:
+        before_brackets = expression[: match.start()]
+        inside_brackets = parse(expression[match.start() + 1 : match.end() - 1]).replace(',',__Symbols.FROZEN)
+        after_brackets = expression[match.end() :]
+
+        expression = before_brackets + inside_brackets + after_brackets
+        result, match = _pattern_match(__Patterns.BRACKETS, expression)
+
+    return expression
 
 def _parse_repetition_expression(expression):
 
@@ -46,6 +60,9 @@ def _parse_expression(expression):
         if exp == '_':
             parsed_expression.append('null')
 
+        elif _pattern_match(__Patterns.BRACKETS, exp)[0]:
+            parsed_expression.append(_parse_bracket_expression(exp))
+        
         elif __Symbols.REPEAT in exp:
             parsed_expression.append(_parse_repetition_expression(exp))
 
@@ -71,7 +88,7 @@ def parse_to_numbers(expression, replace_empty=0.0):
     parsed_expression = parse(expression)
     number_list = []
     for value in parsed_expression.split(','):
-        if value == 'null':
+        if value in ['_', 'null']:
             number_list.append(replace_empty)
         elif value.isdigit():
             number_list.append(float(value))
