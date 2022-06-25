@@ -59,9 +59,6 @@ def _parse_expression(expression):
 
         if exp == '_':
             parsed_expression.append('null')
-
-        elif _pattern_match(__Patterns.BRACKETS, exp)[0]:
-            parsed_expression.append(_parse_bracket_expression(exp))
         
         elif __Symbols.REPEAT in exp:
             parsed_expression.append(_parse_repetition_expression(exp))
@@ -80,6 +77,7 @@ def clean_expression(expression):
 
 def parse(expression):
     expression = clean_expression(expression)
+    expression = _parse_bracket_expression(expression)
     expression = _parse_expression(expression)
     
     return _clean_output(expression)
